@@ -3,7 +3,7 @@
 #
 # MAIN configuration file
 #
-define('__CACHE_DIR__',		__DIR__.'/cache/');
+define('__CACHE_DIR__',		__DIR__.'/cache');
 define('__ALLOWED_IPS__',	'0.0.0.0');
 
 define('__CMD_CLONE__',		'git clone $repo_url $cache_dir');
@@ -13,7 +13,7 @@ define('__CMD_SYNC__',		'cd $cache_dir && git pull');
 # Protocol-specific configurations
 $proto_conf = array(
 	'rsync+ssh' => array(
-		'exec' => '/usr/bin/rsync -avz --exclude \'.git*\' --delete $from $user@$host:$path$repo_path/ 2>&1"',
+		'exec' => 'rsync -avz --exclude \'.git*\' --delete $from $user@$host:$path$repo_path/ 2>&1',
 	),
 	'ftp' => array(
 		'exec' => 'ncftpput -F -D -R -u $user -p $password $host $srv_path/ $from/* 2>&1',
@@ -58,6 +58,6 @@ $repo_conf = array(
 		'branch'	=> 'master',
 		'hosts'		=> 'devbox',
 		'repo_path'	=> '',
-		'server_path'	=> 'gigwebhook-live'
+		'server_path'	=> 'git-webhook'
 	)
 );
