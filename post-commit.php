@@ -1,20 +1,58 @@
 <?php
 
-# configuration files definitions
-define('__MAIN_CONFIG__', __DIR__.'/config.ini');
-define('__REPO_CONFIG__', __DIR__.'/repositories.ini');
-define('__HOST_CONFIG__', __DIR__.'/hosts.ini');
+# include configuration file
+require_once(__DIR__.'/config.php');
+ignore_user_abort();
+
+$_REQUEST['payload'] = <<<EOFF
+{
+  "before": "5aef35982fb2d34e9d9d4502f6ede1072793222d",
+  "repository": {
+    "url": "http://github.com/Coppertino/github-webhook",
+    "name": "github",
+    "description": "You're lookin' at it.",
+    "watchers": 5,
+    "forks": 2,
+    "private": 1,
+    "owner": {
+      "email": "chris@ozmm.org",
+      "name": "defunkt"
+    }
+  },
+  "commits": [
+    {
+      "id": "41a212ee83ca127e3c8cf465891ab7216a705f59",
+      "url": "http://github.com/defunkt/github/commit/41a212ee83ca127e3c8cf465891ab7216a705f59",
+      "author": {
+        "email": "chris@ozmm.org",
+        "name": "Chris Wanstrath"
+      },
+      "message": "okay i give in",
+      "timestamp": "2008-02-15T14:57:17-08:00",
+      "added": ["filepath.rb"]
+    },
+    {
+      "id": "de8251ff97ee194a289832576287d6f8ad74e3d0",
+      "url": "http://github.com/defunkt/github/commit/de8251ff97ee194a289832576287d6f8ad74e3d0",
+      "author": {
+        "email": "chris@ozmm.org",
+        "name": "Chris Wanstrath"
+      },
+      "message": "update pricing a tad",
+      "timestamp": "2008-02-15T14:36:34-08:00"
+    }
+  ],
+  "after": "de8251ff97ee194a289832576287d6f8ad74e3d0",
+  "ref": "refs/heads/master"
+}
+EOFF;
 
 
 /**
  * STEP 0: Preconfiguration
  * - check IP which request this script, 
- * - load main config file
  * - create temporary dir for repo caching
  */
-$conf = parse_ini_file(__MAIN_CONFIG__, true);
-$conf['main']['cache_dir'] = str_replace('./', __DIR__.'/', $conf['main']['cache_dir']);
-
 $sync_task = array();
 $error = $warning = '';
 
@@ -24,31 +62,25 @@ $error = $warning = '';
  * STEP 1: Get params from POST request and check if this repos 
  * is allowed for this instance of github-webhook
  */
-
 if (!empty($_REQUEST['payload'])) {
 	$payload = json_decode($_REQUEST['payload'], true);
 
 	# check if specific variable is exists in loaded payload
 	if (!empty($payload)) {
-		if (strpos($payload['ref'], 'master') !== false) {
-			$repo_conf = parse_ini_file(__REPO_CONFIG__,true);
-			if (!empty($repo_conf)) {
-				# check if we have a config file for current repository
-				# from submited data
-				# need to be like $repo_conf [ repo_url ]; 
-				if (isset($repo_conf[$payload['repository']['url']])) {
-					$sync_conf = &$repo_conf[$payload['repository']['url']];
-				}
-				else $error = 'Script '.__REPO_CONFIG__.' not configured for sync "'.$payload['repository']['url'].'" repository';
+		# check if we have a config file for current repository
+		# from submited data
+		# need to be like $repo_conf [ repo_url ]; 
+		if (isset($repo_conf[@$payload['repository']['url']])) {
+			if (strpos($payload['ref'], $repo_conf[$payload['repository']['url']]['branch']) !== false) {
+				$sync_conf = &$repo_conf[$payload['repository']['url']];
 			}
-			else $error = 'Config file '.__REPO_CONFIG__.' can\'t found';
+			else $error = 'Commit not to "'.$repo_conf[$repo_conf[$payload['repository']['url']]].'" branch. Ignore';
 		}
-		else $error = 'Commit not to master branch. Ignore';
+		else $error = 'Post-commit webhook not configured for sync "'.$payload['repository']['url'].'" repository';
 	}
 	else $error = 'Can\'t decode payload variable';
 }
 else $error = 'Playload variable not exists or empty';
-
 
 
 /**
@@ -56,43 +88,34 @@ else $error = 'Playload variable not exists or empty';
  * commit list of task for syncing
  */
 if (empty($error) && !empty($sync_conf)) {
-	# load servers config and check if all servers 
-	# is described in config or not
-	$host_conf = parse_ini_file(__HOST_CONFIG__, true);
-	if (!empty($host_conf)) {
 
-		# update cache dir for this repository
-		$cache_dir = $conf['main']['cache_dir'].
-			(substr($conf['main']['cache_dir'],-1) != '/' ? '/' : '').
-			urlencode($payload['repository']['url']);
+	# update cache dir for this repository
+	$cache_dir = __CACHE_DIR__.(substr(__CACHE_DIR__,-1) != '/' ? '/' : '').urlencode($payload['repository']['url']);
 
+	# build task list for each of this servers
+	$hosts = explode(',', $sync_conf['hosts']);
+	foreach ($hosts as &$host) {
+		$host = trim($host);
+		if (!empty($host) && !empty($hosts_conf[$host])) {
+			$c_host = &$hosts_conf[$host];
 
-		# build task list for each of this servers
-		$hosts = explode(',', $sync_conf['hosts']);
-		foreach ($hosts as &$host) {
-			$host = trim($host);
-			if (!empty($host_conf[$host])) {
-				$c_host = &$host_conf[$host];
+			# check if sync proto for this server is allowed for script
+			if (!empty($proto_conf[$c_host['proto']]['exec'])) {
+				$replace = array(
+					'$from'		=> $cache_dir.(!empty($sync_conf['repo_path']) ? (substr($sync_conf['repo_path'], 1) != '/' && substr($cache_dir,-1) != '/' ? '/' : '').$sync_conf['repo_path'] : '').'/',
+					'$user'		=> $c_host['user'],
+					'$host'		=> $c_host['host'],
+					'$password'	=> $c_host['password'],
+					'$path'		=> $c_host['path'],
+					'$repo_path'	=> $sync_conf['server_path'],
+				);
 
-				# check if sync proto for this server is allowed for script
-				if (isset($c_host['proto']) && !empty($conf[$c_host['proto']]['exec'])) {
-					$replace = array(
-						'$from'		=> $cache_dir.(!empty($sync_conf['repo_path']) ? (substr($sync_conf['repo_path'], 1) != '/' && substr($cache_dir,-1) != '/' ? '/' : '').$sync_conf['repo_path'] : ''),
-						'$user'		=> $c_host['user'],
-						'$host'		=> $c_host['host'],
-						'$password'	=> $c_host['password'],
-						'$path'		=> $c_host['path'],
-						'$repo_path'	=> $sync_conf['server_path'],
-					);
-
-					$sync_task[] = str_replace(array_keys($replace), array_values($replace), $conf[$c_host['proto']]['exec']);
-				}
-				else $warning = 'Protocol "'.$c_host['proto'].'" not described in '.__MAIN_CONFIG__.'. Ignore sync to host "'.$host.'"';
+				$sync_task[] = str_replace(array_keys($replace), array_values($replace), $proto_conf[$c_host['proto']]['exec']);
 			}
-			else $warning = 'Host "'.$host.'" not found in '.__HOST_CONFIG__.' file. Ignore sync for it';
+			else $warning = 'Protocol "'.$c_host['proto'].'" not described in post-commit configuration. Ignore sync to host "'.$host.'"';
 		}
+		else $warning = 'Host "'.$host.'" not found in post-commit configuration. Ignore sync';
 	}
-	else $error = 'Can\'t load config file '.__HOST_CONFIG__.' with server configurations';
 }
 
 
@@ -112,21 +135,21 @@ if (empty($error) && !empty($sync_task)) {
 	# cache project (clone if not exists or sync)
 	# if dir is already created, try to sync it
 	if (is_dir($git['$cache_dir'])) {
-		echo exec(str_replace(array_keys($git), array_values($git), $conf['main']['sync']));
+		echo exec(str_replace(array_keys($git), array_values($git), __CMD_SYNC__))."<hr>";
 		$updated = true;
 	}
 
 	# if repository not updated
 	if (!$updated) {
-		echo exec(str_replace(array_keys($git), array_values($git), $conf['main']['clone']));
+		echo exec(str_replace(array_keys($git), array_values($git), __CMD_CLONE__))."<hr>";
 	}
 
 	# check if dir is not empty. If not - do sync command
 	$files = @scandir($git['$cache_dir']);
 	if (count($files) > 2) {
 		foreach ($sync_task as $task) {
-			echo $task."\n";
-			echo exec($task);
+			echo $task."<hr>";
+			echo system($task);
 		}
 	}
 }
