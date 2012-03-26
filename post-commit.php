@@ -11,18 +11,31 @@ ignore_user_abort();
  * - create temporary dir for repo caching
  */
 $sync_task = array();
-$error = $warning = '';
+$error = '';
+$log = '------------------------------'.PHP_EOL.date('Y-m-d H:i:s').PHP_EOL.'Sync started'.PHP_EOL;
 
-
-// TODO: add checking IP of remote addr
-
+/**
+ * STEP 0: Check requests by ip address
+ */
+$log .= '--- IP check'.PHP_EOL;
+if (!empty($_SERVER['REMOTE_ADDR'])) {
+	if (strlen(__ALLOWED_IPS__) > 0) {
+		if (stripos(__ALLOWED_IPS__, $_SERVER['REMOTE_ADDR']) !== false) $log .= 'IP "'.$_SERVER['REMOTE_ADDR'].'": passed';
+		else $error = 'This ip "'.$_SERVER['REMOTE_ADDR'].'" is not allowed';
+	}
+	else $log .= '**WARNING** List of allowed ips is empty. All requests are allowed.';
+}
+else $error = '$_SERVER[\'REMOTE_ADDR\'] is not set. Operations from console are not allowed.';
 
 /**
  * STEP 1: Get params from POST request and check if this repos 
  * is allowed for this instance of github-webhook
  */
-if (!empty($_REQUEST['payload'])) {
+if (empty($error)) $log .= '--- Repo check'.PHP_EOL;
+if (empty($error) && !empty($_REQUEST['payload'])) {
+	$log .= 'Payload encoded:'.PHP_EOL.print_r($_REQUEST['payload'],1).PHP_EOL;
 	$payload = json_decode($_REQUEST['payload'], true);
+	$log .= 'Payload decoded:'.PHP_EOL.print_r($payload,1).PHP_EOL;
 
 	# check if specific variable is exists in loaded payload
 	if (!empty($payload)) {
@@ -31,6 +44,7 @@ if (!empty($_REQUEST['payload'])) {
 		# need to be like $repo_conf [ repo_url ]; 
 		if (isset($repo_conf[@$payload['repository']['url']])) {
 			if (strpos($payload['ref'], $repo_conf[$payload['repository']['url']]['branch']) !== false) {
+				$log .= 'Sync config found.'.PHP_EOL;
 				$sync_conf = &$repo_conf[$payload['repository']['url']];
 			}
 			else $error = 'Commit not to "'.$repo_conf[$repo_conf[$payload['repository']['url']]].'" branch. Ignore';
@@ -46,15 +60,19 @@ else $error = 'Playload variable not exists or empty';
  * STEP 2: Check configuration of repository sync, 
  * commit list of task for syncing
  */
+if (empty($error)) $log .= '--- Config check'.PHP_EOL;
 if (empty($error) && !empty($sync_conf)) {
 
 	# update cache dir for this repository
 	$cache_dir = __CACHE_DIR__.(substr(__CACHE_DIR__,-1) != '/' ? '/' : '').urlencode($payload['repository']['url']);
-
+	$log .= 'Cache dir: '.$cache_dir.PHP_EOL;
+	
+	$log .= 'Hosts to sync: '.$hosts.PHP_EOL.'=========='.PHP_EOL;
 	# build task list for each of this servers
 	$hosts = explode(',', $sync_conf['hosts']);
 	foreach ($hosts as &$host) {
 		$host = trim($host);
+		$log .= '----- '.$host.PHP_EOL;
 		if (!empty($host) && !empty($hosts_conf[$host])) {
 			$c_host = &$hosts_conf[$host];
 
@@ -68,13 +86,16 @@ if (empty($error) && !empty($sync_conf)) {
 					'$path'		=> $c_host['path'],
 					'$repo_path'	=> $sync_conf['server_path'],
 				);
-
-				$sync_task[] = str_replace(array_keys($replace), array_values($replace), $proto_conf[$c_host['proto']]['exec']);
+				
+				$tmp_task = str_replace(array_keys($replace), array_values($replace), $proto_conf[$c_host['proto']]['exec']);
+				$log .= 'Task:'.PHP_EOL.$tmp_task.PHP_EOL;
+				$sync_task[] = $tmp_task;
 			}
-			else $warning = 'Protocol "'.$c_host['proto'].'" not described in post-commit configuration. Ignore sync to host "'.$host.'"';
+			else $log .= '**WARNING** Protocol "'.$c_host['proto'].'" not described in post-commit configuration. Ignore sync to host "'.$host.'"'.PHP_EOL;
 		}
-		else $warning = 'Host "'.$host.'" not found in post-commit configuration. Ignore sync';
+		else $log .= '**WARNING** Host "'.$host.'" not found in post-commit configuration. Ignore sync'.PHP_EOL;
 	}
+	$log .= '=========='.PHP_EOL;
 }
 
 
@@ -82,6 +103,7 @@ if (empty($error) && !empty($sync_conf)) {
  * STEP 3: 
  * checkout (cache) commited version of master branch 
  */
+if (empty($error)) $log .= '--- Checkout & sync'.PHP_EOL;
 if (empty($error) && !empty($sync_task)) {
 
 	# prepare for clone repo or update it
@@ -126,7 +148,11 @@ if (empty($error) && !empty($sync_task)) {
 	}
 }
 
-// TODO: adding correct processing error
+# Log and report
+if (!empty($error)) $log .= '**ERROR** '.$error.PHP_EOL;
 
-echo 'Warnings: '.$warning."\n";
-echo 'Errors: '.$error."\n";
+file_put_contents(LOG_FILENAME, $log.PHP_EOL, FILE_APPEND);
+
+if (MAIL_LOGS || !empty($error) && MAIL_ERRORS) {
+	mail(MAIL_TO, 'git-webhook error at '.date('Y-m-d H:i:s'), $log);
+}

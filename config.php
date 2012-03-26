@@ -4,10 +4,16 @@
 # MAIN configuration file
 #
 define('__CACHE_DIR__',		__DIR__.'/cache');
-define('__ALLOWED_IPS__',	'0.0.0.0');
+define('__ALLOWED_IPS__',	'127.0.0.1'); # Separated with comma. Empty string - all ips allowed. Example: '127.0.0.1, 192.168.1.1'
 
 define('__CMD_CLONE__',		'git clone $repo_url $cache_dir');
 define('__CMD_SYNC__',		'cd $cache_dir && git pull');
+
+
+define('LOG_FILENAME',		'git-sync.log');
+define('MAIL_TO',		'atomic@iig-global.com'); # lucky@iig-global.com, atomic@iig-global.com, acrist@iig-global.com
+define('MAIL_LOGS',		true);
+define('MAIL_ERRORS',		true);
 
 
 # Protocol-specific configurations
