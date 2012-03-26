@@ -4,6 +4,21 @@
 require_once(__DIR__.'/config.php');
 ignore_user_abort();
 
+# Copy dir contents
+function copyContents($source, $dest) {
+	$sourceHandle = opendir($source);
+	if (!is_dir($dest)) mkdir($dest, 0777, true);
+	
+	while($res = readdir($sourceHandle)) {
+		if ($res == '.' || $res == '..') continue;
+		
+		if(is_dir($source . '/' . $res)) {
+			copyContents($source . '/' . $res, $dest . '/' . $res);
+		}
+		else copy($source . '/' . $res, $dest . '/' . $res);
+	}
+}
+
 
 /**
  * STEP 0: Preconfiguration
@@ -122,28 +137,47 @@ if (empty($error) && !empty($sync_task)) {
 	# cache project (clone if not exists or sync)
 	# if dir is already created, try to sync it
 	if (is_dir($git['$cache_dir'])) {
+		$log .= '----- SYNC'.PHP_EOL;
 		$command = str_replace(array_keys($git), array_values($git), __CMD_SYNC__);
 		echo '<hr/>EXECUTE COMMAND: '.$command.'<br/>';
+		$log .= 'Executing: '.$command.PHP_EOL;
 		exec($command, $result).'<hr/>';
 		echo '* '.implode('<br/>* ', $result);
+		$log .= 'Result: '.PHP_EOL.'* '.implode(PHP_EOL.'* ', $result).PHP_EOL.PHP_EOL;
 		$updated = true;
 	}
 
 	# if repository not updated
 	if (!$updated) {
+		$log .= '----- CLONE'.PHP_EOL;
 		$command = str_replace(array_keys($git), array_values($git), __CMD_CLONE__);
 		echo '<hr/>EXECUTE COMMAND: '.$command.'<br/>';
+		$log .= 'Executing: '.$command.PHP_EOL;
 		exec($command, $result);
 		echo '* '.implode('<br/>* ', $result);
+		$log .= 'Result: '.PHP_EOL.'* '.implode(PHP_EOL.'* ', $result).PHP_EOL.PHP_EOL;
+	}
+	
+	if (!empty($sync_conf['config_folder'])) {
+		$files = @scandir(__SYNC_CONFIGS_DIR__ . '/' . $sync_conf['config_folder']);
+		
+		# Copy configs
+		if (count($files) > 2) {
+			$log .= 'Found config folder: "'.$sync_conf['config_folder'].'"'.PHP_EOL.PHP_EOL;
+			copyContents(__SYNC_CONFIGS_DIR__ . '/' . $sync_conf['config_folder'], $git['$cache_dir']);
+		}
 	}
 
 	# check if dir is not empty. If not - do sync command
 	$files = @scandir($git['$cache_dir']);
 	if (count($files) > 2) {
 		foreach ($sync_task as $task) {
+			$log .= '----- UPLOAD'.PHP_EOL;
 			echo '<hr/>'.$task.'<br/>';
+			$log .= 'Executing: '.$command.PHP_EOL;
 			exec($task, $result);
 			echo '* '.implode('<br/>* ', $result);
+			$log .= 'Result: '.PHP_EOL.'* '.implode(PHP_EOL.'* ', $result).PHP_EOL.PHP_EOL;
 		}
 	}
 }

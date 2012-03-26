@@ -1,9 +1,9 @@
 .DS_Store
 cache/*
+sync-configs/*
+
 .buildpath
-
 .project
-
 .settings/org.eclipse.php.core.prefs
 
 ._.gitignore

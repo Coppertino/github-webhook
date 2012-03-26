@@ -4,6 +4,7 @@
 # MAIN configuration file
 #
 define('__CACHE_DIR__',		__DIR__.'/cache');
+define('__SYNC_CONFIGS_DIR__',	__DIR__.'/sync-configs');
 define('__ALLOWED_IPS__',	'127.0.0.1'); # Separated with comma. Empty string - all ips allowed. Example: '127.0.0.1, 192.168.1.1'
 
 define('__CMD_CLONE__',		'git clone $repo_url $cache_dir');
@@ -64,6 +65,7 @@ $repo_conf = array(
 		'branch'	=> 'master',
 		'hosts'		=> 'devbox',
 		'repo_path'	=> '',
-		'server_path'	=> 'git-webhook'
+		'server_path'	=> 'git-webhook',
+		'config_folder'	=> 'webhook'
 	)
 );
