@@ -29,9 +29,9 @@ $sync_task = array();
 $error = '';
 $log = '------------------------------'.PHP_EOL.date('Y-m-d H:i:s').PHP_EOL.'Sync started'.PHP_EOL;
 
-/**
- * STEP 0: Check requests by ip address
- */
+$log .= 'REQUEST:'.PHP_EOL.print_r($_REQUEST, 1).PHP_EOL;
+
+# Check requests by ip address
 $log .= '--- IP check'.PHP_EOL;
 if (!empty($_SERVER['REMOTE_ADDR'])) {
 	if (strlen(__ALLOWED_IPS__) > 0) {
