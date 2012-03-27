@@ -6,6 +6,14 @@ Overall effect is very **similar to SVN property 'sync'** which gives you the op
 
 For example, you have some project 'A', which is already in production stage and a copy of it with changed production settings is hosted somewhere. All is fine for some time, but then you want to add a new feature or fix some bugs / security issues. With webhook you can make and commit changes to test branch, immediately test it and commit to master branch, with will be automatically synced to production server with saved production settings
 
+h2. How it works
+
+Synchronization goes in 4 steps:
+1. Permission checks (IP filtering)
+2. Validation and processing of incoming parameters
+3. Forming the list of tasks to synchronize
+4. Repository cloning (or pulling if already cached), replacing configuration files and uploading to the server(s)
+
 h2. How to install
 
 *What will you need to use webhook:*
@@ -19,7 +27,8 @@ You will need admin rights for your project on GitHub. Go to admin panel and set
 *How to setup webhook config:*
 Make a copy of 'sample.config.user.php' and name it 'config.user.php'. This file contains all settings (with examples) users should change in order to use webhook.
 
-*How to save and update project configuration files:*
+h2. How to override project configuration files with real ones
+
 At the moment, to save and not share user configuration files for different projects, webhook uses special folder ('sync-configs/'), which 'overrides' project configurations. In this folder you should create a subfolder associated with your project, which will contain the structure of the original project, but will have only configuration files. The name of this subfolder you should enter in '$repo_conf' variable as 'config_folder' parameter.
 _Example:_
 You have project 'Abc' with such folder structure:
