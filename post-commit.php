@@ -185,9 +185,10 @@ if (empty($error) && !empty($sync_task)) {
 
 # Log and report
 if (!empty($error)) $log .= '**ERROR** '.$error.PHP_EOL;
+else $log .= '** SYNC FINISHED **'.PHP_EOL;
 
 file_put_contents(LOG_FILENAME, $log.PHP_EOL, FILE_APPEND);
 
 if (MAIL_LOGS || !empty($error) && MAIL_ERRORS) {
-	mail(MAIL_TO, 'git-webhook error at '.date('Y-m-d H:i:s'), $log);
+	mail(MAIL_TO, 'git-webhook '.(!empty($error) ? 'error' : 'successfully synced').' at '.date('Y-m-d H:i:s'), $log);
 }
