@@ -2,9 +2,9 @@ h2. What is this?
 
 This project was created to make easier the procedure of updating production servers with new versions of other projects (generally it was designed for web applications, but there is no limitation of use).
 
-Overall effect is very **similar to SVN property 'sync'** which gives you the opportunity to merge new changes straight to the testing and production servers.
+Overall effect is an upgraded git cloning, which gives you the opportunity to merge new changes straight to the testing and production servers with appropriate real configurations, while **hiding these configurations from public repositories**.
 
-For example, you have some project 'A', which is already in production stage and a copy of it with changed production settings is hosted somewhere. All is fine for some time, but then you want to add a new feature or fix some bugs / security issues. With webhook you can make and commit changes to test branch, immediately test it and commit to master branch, with will be automatically synced to production server with saved production settings
+For example, you have some project 'A', which is already in production stage and a copy of it with changed production settings is hosted somewhere. All is fine for some time, but then you want to add a new feature or fix some bugs / security issues. With webhook you can make and commit changes to test branch, immediately test it and commit to master branch, which will be automatically synced to production server with saved production settings.
 
 h2. How it works
 
