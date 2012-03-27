@@ -1,5 +1,6 @@
 .DS_Store
-cache/*
+config.user.php
+sync-cache/*
 sync-configs/*
 
 .buildpath

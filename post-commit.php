@@ -1,7 +1,8 @@
 <?php
 
 # include configuration file
-require_once(__DIR__.'/config.php');
+require_once(__DIR__.'/config.core.php');
+require_once(__DIR__.'/config.user.php');
 ignore_user_abort();
 
 # Copy dir contents
