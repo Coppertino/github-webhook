@@ -27,18 +27,18 @@ function copyContents($source, $dest) {
  */
 $sync_task = array();
 $error = '';
-$log = '------------------------------'.PHP_EOL.date('Y-m-d H:i:s').PHP_EOL.'Sync started'.PHP_EOL;
+$log = '------------------------------------------------------------------------------------------'.PHP_EOL.date('Y-m-d H:i:s').PHP_EOL.'Sync started'.PHP_EOL.PHP_EOL;
 
-$log .= 'REQUEST:'.PHP_EOL.print_r($_REQUEST, 1).PHP_EOL;
+$log .= 'REQUEST:'.PHP_EOL.print_r($_REQUEST, 1).PHP_EOL.PHP_EOL.PHP_EOL;
 
 # Check requests by ip address
-$log .= '--- IP check'.PHP_EOL;
+$log .= '------------------------------ IP check'.PHP_EOL;
 if (!empty($_SERVER['REMOTE_ADDR'])) {
 	if (strlen(__ALLOWED_IPS__) > 0) {
-		if (stripos(__ALLOWED_IPS__, $_SERVER['REMOTE_ADDR']) !== false) $log .= 'IP "'.$_SERVER['REMOTE_ADDR'].'": passed';
+		if (stripos(__ALLOWED_IPS__, $_SERVER['REMOTE_ADDR']) !== false) $log .= 'IP "'.$_SERVER['REMOTE_ADDR'].'": passed'.PHP_EOL;
 		else $error = 'This ip "'.$_SERVER['REMOTE_ADDR'].'" is not allowed';
 	}
-	else $log .= '**WARNING** List of allowed ips is empty. All requests are allowed.';
+	else $log .= '**WARNING** List of allowed ips is empty. All requests are allowed.'.PHP_EOL;
 }
 else $error = '$_SERVER[\'REMOTE_ADDR\'] is not set. Operations from console are not allowed.';
 
@@ -46,11 +46,11 @@ else $error = '$_SERVER[\'REMOTE_ADDR\'] is not set. Operations from console are
  * STEP 1: Get params from POST request and check if this repos 
  * is allowed for this instance of github-webhook
  */
-if (empty($error)) $log .= '--- Repo check'.PHP_EOL;
+if (empty($error)) $log .= PHP_EOL.'------------------------------ Repo check'.PHP_EOL;
 if (empty($error) && !empty($_REQUEST['payload'])) {
 	$log .= 'Payload encoded:'.PHP_EOL.print_r($_REQUEST['payload'],1).PHP_EOL;
 	$payload = json_decode($_REQUEST['payload'], true);
-	$log .= 'Payload decoded:'.PHP_EOL.print_r($payload,1).PHP_EOL;
+	$log .= PHP_EOL.'Payload decoded:'.PHP_EOL.print_r($payload,1).PHP_EOL;
 
 	# check if specific variable is exists in loaded payload
 	if (!empty($payload)) {
@@ -59,7 +59,7 @@ if (empty($error) && !empty($_REQUEST['payload'])) {
 		# need to be like $repo_conf [ repo_url ]; 
 		if (isset($repo_conf[@$payload['repository']['url']])) {
 			if (strpos($payload['ref'], $repo_conf[$payload['repository']['url']]['branch']) !== false) {
-				$log .= 'Sync config found.'.PHP_EOL;
+				$log .= 'SYNC CONFIG FOUND'.PHP_EOL.PHP_EOL;
 				$sync_conf = &$repo_conf[$payload['repository']['url']];
 			}
 			else $error = 'Commit not to "'.$repo_conf[$repo_conf[$payload['repository']['url']]].'" branch. Ignore';
@@ -68,14 +68,14 @@ if (empty($error) && !empty($_REQUEST['payload'])) {
 	}
 	else $error = 'Can\'t decode payload variable';
 }
-else $error = 'Playload variable not exists or empty';
+else if (empty($error)) $error = 'Payload variable does not exist or empty';
 
 
 /**
  * STEP 2: Check configuration of repository sync, 
  * commit list of task for syncing
  */
-if (empty($error)) $log .= '--- Config check'.PHP_EOL;
+if (empty($error)) $log .= PHP_EOL.'------------------------------ Config check'.PHP_EOL;
 if (empty($error) && !empty($sync_conf)) {
 
 	# update cache dir for this repository
@@ -118,7 +118,7 @@ if (empty($error) && !empty($sync_conf)) {
  * STEP 3: 
  * checkout (cache) commited version of master branch 
  */
-if (empty($error)) $log .= '--- Checkout & sync'.PHP_EOL;
+if (empty($error)) $log .= PHP_EOL.'------------------------------ Checkout & sync'.PHP_EOL;
 if (empty($error) && !empty($sync_task)) {
 
 	# prepare for clone repo or update it
@@ -137,7 +137,7 @@ if (empty($error) && !empty($sync_task)) {
 	# cache project (clone if not exists or sync)
 	# if dir is already created, try to sync it
 	if (is_dir($git['$cache_dir'])) {
-		$log .= '----- SYNC'.PHP_EOL;
+		$log .= '---------- SYNC'.PHP_EOL;
 		$command = str_replace(array_keys($git), array_values($git), __CMD_SYNC__);
 		echo '<hr/>EXECUTE COMMAND: '.$command.'<br/>';
 		$log .= 'Executing: '.$command.PHP_EOL;
@@ -149,7 +149,7 @@ if (empty($error) && !empty($sync_task)) {
 
 	# if repository not updated
 	if (!$updated) {
-		$log .= '----- CLONE'.PHP_EOL;
+		$log .= '---------- CLONE'.PHP_EOL;
 		$command = str_replace(array_keys($git), array_values($git), __CMD_CLONE__);
 		echo '<hr/>EXECUTE COMMAND: '.$command.'<br/>';
 		$log .= 'Executing: '.$command.PHP_EOL;
@@ -172,7 +172,7 @@ if (empty($error) && !empty($sync_task)) {
 	$files = @scandir($git['$cache_dir']);
 	if (count($files) > 2) {
 		foreach ($sync_task as $task) {
-			$log .= '----- UPLOAD'.PHP_EOL;
+			$log .= '---------- UPLOAD'.PHP_EOL;
 			echo '<hr/>'.$task.'<br/>';
 			$log .= 'Executing: '.$command.PHP_EOL;
 			exec($task, $result);

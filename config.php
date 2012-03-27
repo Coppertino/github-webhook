@@ -3,7 +3,7 @@
 #
 # MAIN configuration file
 #
-define('__CACHE_DIR__',		__DIR__.'/cache');
+define('__CACHE_DIR__',		__DIR__.'/sync-cache');
 define('__SYNC_CONFIGS_DIR__',	__DIR__.'/sync-configs');
 define('__ALLOWED_IPS__',	'127.0.0.1'); # Separated with comma. Empty string - all ips allowed. Example: '127.0.0.1, 192.168.1.1'
 
