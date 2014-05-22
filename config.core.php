@@ -18,7 +18,10 @@ define('__CMD_SYNC__',		'cd $cache_dir && git pull');
 # Protocol-specific configurations
 $proto_conf = array(
 	'rsync+ssh' => array(
-		'exec' => 'rsync -avz --exclude \'.git*\' --delete $from $user@$host:$path$repo_path/ 2>&1',
+                #'exec' => 'rsync -avz --exclude \'.git*\' --delete $from $user@$
+                # This variation supports sending password to the ssh command, 
+                # obviously this is not ideal.  
+		'exec' => 'rsync -avz --exclude \'.git*\' --delete --rsh="/usr/bin/sshpass -p $password ssh -o StrictHostKeyChecking=no -l username" $from $user@$host:$path$repo_path/ 2>&1',
 	),
 	'ftp' => array(
 		'exec' => 'ncftpput -F -D -R -u $user -p $password $host $srv_path/ $from/* 2>&1',
